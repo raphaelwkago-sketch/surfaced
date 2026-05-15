@@ -4,7 +4,7 @@ export async function GET(request: NextRequest) {
   const q = request.nextUrl.searchParams.get('q') || '';
 
   const res = await fetch(
-    `https://specked-recycler-uproot.ngrok-free.dev/webhook/Search?q=${encodeURIComponent(q)}`,
+    `https://thebuilderman.app.n8n.cloud/webhook/Search?q=${encodeURIComponent(q)}`,
     {
       headers: {
         'ngrok-skip-browser-warning': '1',
