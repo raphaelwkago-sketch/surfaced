@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
   );
 
   const text = await res.text();
+  console.log('ngrok response:', text.substring(0, 200));
 
   try {
     const data = JSON.parse(text);
@@ -22,6 +23,6 @@ export async function GET(request: NextRequest) {
       headers: { 'Access-Control-Allow-Origin': '*' }
     });
   } catch {
-    return NextResponse.json({ error: 'Parse failed', raw: text }, { status: 500 });
+    return NextResponse.json({ error: 'Parse failed', raw: text.substring(0, 500) }, { status: 500 });
   }
 }
