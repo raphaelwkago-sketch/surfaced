@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Search, Loader2, ArrowRight, ExternalLink, SlidersHorizontal, Tag, DollarSign, AlertCircle } from 'lucide-react';
 
-const SEARCH_API = 'https://specked-recycler-uproot.ngrok-free.dev/webhook/Search';
+const SEARCH_API = '/api/search';
 const SCRAPER_API = 'https://specked-recycler-uproot.ngrok-free.dev/webhook/surfaced';
 
 interface Tool {
