@@ -107,13 +107,13 @@ function Home({ onNavigate }: { onNavigate: (path: string, query?: string) => vo
           placeholder="Find an AI tool..."
           style={{
             flex: 1,
-            border: 'none',
+            border: '1px solid #4a4d51',
+            borderRadius: '6px',
+            padding: '10px 14px',
             outline: 'none',
             background: 'transparent',
             fontSize: '15px',
             color: '#e8eaed',
-            padding: '10px 0',
-            boxShadow: 'none',
           }}
           autoFocus
         />
