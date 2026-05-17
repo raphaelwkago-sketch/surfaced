@@ -114,8 +114,6 @@ function Home({ onNavigate }: { onNavigate: (path: string, query?: string) => vo
             color: '#e8eaed',
             padding: '10px 0',
             boxShadow: 'none',
-            appearance: 'none',
-            WebkitAppearance: 'none',
           }}
           autoFocus
         />
@@ -207,7 +205,7 @@ function SearchResults({ initialQuery, onNavigate }: { initialQuery: string; onN
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search AI tools..."
-            style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: '15px', color: '#e8eaed', boxShadow: 'none', appearance: 'none', WebkitAppearance: 'none' }}
+            style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: '15px', color: '#e8eaed' }}
           />
           {query && (
             <span onClick={() => { setQuery(''); onNavigate('/'); }} style={{ cursor: 'pointer', color: '#9aa0a6', fontSize: '18px' }}>×</span>
