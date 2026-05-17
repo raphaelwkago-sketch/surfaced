@@ -1,14 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Search, Loader2, AlertCircle, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Search, Sparkles } from 'lucide-react';
 
 const SEARCH_API = '/api/search';
 
 interface Tool {
   id: string | number;
   name: string;
-  slug?: string;
   category: string;
   tagline?: string;
   monthly_price: number | null;
@@ -17,62 +16,147 @@ interface Tool {
   source_url: string | null;
 }
 
+interface Route {
+  path: string;
+  query: string;
+}
+
 export default function App() {
-  const [view, setView] = useState<'home' | 'results'>('home');
+  const [currentRoute, setCurrentRoute] = useState<Route>({ path: '/', query: '' });
+
+  const navigate = (path: string, query = '') => {
+    setCurrentRoute({ path, query });
+  };
+
+  if (currentRoute.path === '/search') {
+    return <SearchResults initialQuery={currentRoute.query} onNavigate={navigate} />;
+  }
+
+  return <Home onNavigate={navigate} />;
+}
+
+function Home({ onNavigate }: { onNavigate: (path: string, query?: string) => void }) {
   const [query, setQuery] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+
+  const handleSearch = () => {
+    if (query.trim()) {
+      onNavigate('/search', query.trim());
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') handleSearch();
+  };
+
+  return (
+    <main style={{
+      backgroundColor: '#202124',
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingBottom: '120px',
+      fontFamily: 'system-ui, -apple-system, sans-serif'
+    }}>
+      <h1 style={{
+        color: '#00AEEF',
+        fontSize: '92px',
+        fontWeight: '500',
+        letterSpacing: '-4px',
+        marginBottom: '8px',
+        lineHeight: 1,
+      }}>
+        Surfaced
+      </h1>
+
+      <p style={{
+        color: '#9aa0a6',
+        fontSize: '14px',
+        marginBottom: '28px',
+        letterSpacing: '0.2px',
+      }}>
+        Search for AI tools without the noise
+      </p>
+
+      <label
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        style={{
+          width: '100%',
+          maxWidth: '560px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          padding: '8px 20px',
+          backgroundColor: (isHovered && !isFocused) ? '#3c4043' : '#303134',
+          border: '1px solid #5f6368',
+          borderRadius: '28px',
+          transition: 'background-color 0.2s, box-shadow 0.2s',
+          boxShadow: (isHovered && !isFocused) ? '0 1px 6px rgba(0,0,0,0.2)' : 'none',
+          cursor: 'text',
+        }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9aa0a6" strokeWidth="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          placeholder="Find an AI tool..."
+          style={{
+            flex: 1,
+            border: 'none',
+            outline: 'none',
+            background: 'transparent',
+            fontSize: '15px',
+            color: '#e8eaed',
+            padding: '10px 0',
+          }}
+          autoFocus
+        />
+      </label>
+    </main>
+  );
+}
+
+function SearchResults({ initialQuery, onNavigate }: { initialQuery: string; onNavigate: (path: string, query?: string) => void }) {
+  const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<Tool[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [priceFilter, setPriceFilter] = useState('All');
 
-  const categories = ['All', ...Array.from(new Set(results.map((t) => t.category).filter(Boolean)))];
+  useEffect(() => {
+    const fetchResults = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`${SEARCH_API}?q=${encodeURIComponent(initialQuery)}`);
+        if (!res.ok) throw new Error(`Server error: ${res.status}`);
+        const data = await res.json();
+        setResults(Array.isArray(data) ? data : []);
+      } catch {
+        setError('Could not connect to the search API.');
+        setResults([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchResults();
+  }, [initialQuery]);
 
-  const handleSearch = async (e?: React.FormEvent, overrideQuery?: string) => {
-    if (e) e.preventDefault();
-    const q = overrideQuery ?? query;
-    if (!q.trim()) return;
-    if (overrideQuery) setQuery(overrideQuery);
-    setIsSearching(true);
-    setError(null);
-    try {
-      const res = await fetch(`${SEARCH_API}?q=${encodeURIComponent(q)}`);
-      if (!res.ok) throw new Error(`Server error: ${res.status}`);
-      const data = await res.json();
-      setResults(Array.isArray(data) ? data : []);
-      setView('results');
-      setSelectedCategory('All');
-      setPriceFilter('All');
-    } catch {
-      setError('Could not connect to the search API. Make sure n8n is running.');
-      setView('results');
-      setResults([]);
-    } finally {
-      setIsSearching(false);
+  const handleSearch = () => {
+    if (query.trim() && query.trim() !== initialQuery) {
+      onNavigate('/search', query.trim());
     }
   };
 
-  const hasFree = (tool: Tool) => {
-    if (tool.free_tier === true) return true;
-    if (typeof tool.free_tier === 'string') {
-      const v = tool.free_tier.toLowerCase();
-      return v !== 'no' && v !== 'false' && v !== '' && v !== 'null';
-    }
-    return !!tool.free_tier_description;
-  };
-
-  const filteredResults = results.filter((tool) => {
-    if (selectedCategory !== 'All' && tool.category !== selectedCategory) return false;
-    if (priceFilter === 'Free only') return hasFree(tool) || tool.monthly_price === 0;
-    if (priceFilter === 'Under $20/mo') return tool.monthly_price !== null && tool.monthly_price <= 20;
-    if (priceFilter === 'Under $50/mo') return tool.monthly_price !== null && tool.monthly_price <= 50;
-    return true;
-  });
-
-  const formatPrice = (price: number | null) => {
-    if (price === null || price === undefined) return null;
-    if (price === 0) return 'Free';
-    return `$${price}/mo`;
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') handleSearch();
   };
 
   const getDomain = (url: string | null) => {
@@ -80,163 +164,193 @@ export default function App() {
     try { return new URL(url).hostname.replace('www.', ''); } catch { return null; }
   };
 
-  if (view === 'home') {
-    return (
-      <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 16px' }}>
-        <div style={{ minHeight: 480, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ fontSize: 68, fontWeight: 500, letterSpacing: '-3px', marginBottom: 12, lineHeight: 1, color: '#00AEEF' }}>
-            Surfaced
-          </div>
-          <div style={{ fontSize: 14, color: '#71717a', marginBottom: 28, letterSpacing: '0.2px' }}>
-            Search for AI tools without the noise
-          </div>
-          <form
-            onSubmit={handleSearch}
-            style={{ width: '100%', maxWidth: 560, display: 'flex', alignItems: 'center', gap: 12, padding: '13px 20px', border: '0.5px solid #3f3f46', borderRadius: 28, background: '#0a0a0a' }}
-          >
-            <Search size={18} color="#71717a" style={{ flexShrink: 0 }} />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Find an AI tool..."
-              autoFocus
-              style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 16, color: 'white' }}
-            />
-            {isSearching && <Loader2 size={16} color="#71717a" className="animate-spin" style={{ flexShrink: 0 }} />}
-          </form>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#d4d4d8' }}>
+    <div style={{
+      backgroundColor: '#202124',
+      minHeight: '100vh',
+      color: '#e8eaed',
+      fontFamily: 'system-ui, -apple-system, sans-serif'
+    }}>
       {/* Header */}
-      <header style={{ display: 'flex', alignItems: 'center', gap: 20, padding: '16px 20px', borderBottom: '0.5px solid #27272a' }}>
+      <header style={{
+        display: 'flex',
+        alignItems: 'center',
+        padding: '24px',
+        borderBottom: '1px solid #3c4043',
+        gap: '24px',
+        position: 'sticky',
+        top: 0,
+        backgroundColor: '#202124',
+        zIndex: 10
+      }}>
         <button
-          onClick={() => { setView('home'); setQuery(''); setResults([]); setError(null); }}
-          style={{ fontSize: 28, fontWeight: 500, letterSpacing: '-1.5px', color: '#00AEEF', flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+          onClick={() => onNavigate('/')}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: '#9aa0a6',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '8px',
+            borderRadius: '50%',
+          }}
+          title="Back to Search"
+        >
+          <ArrowLeft size={20} />
+        </button>
+
+        <h1
+          onClick={() => onNavigate('/')}
+          style={{
+            color: '#00AEEF',
+            fontSize: '28px',
+            fontWeight: '500',
+            letterSpacing: '-1px',
+            margin: 0,
+            cursor: 'pointer'
+          }}
         >
           Surfaced
-        </button>
-        <form
-          onSubmit={handleSearch}
-          style={{ flex: 1, maxWidth: 580, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', border: '0.5px solid #3f3f46', borderRadius: 24, background: '#0a0a0a' }}
-        >
-          <Search size={16} color="#71717a" style={{ flexShrink: 0 }} />
+        </h1>
+
+        <div style={{
+          flex: 1,
+          maxWidth: '690px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          padding: '10px 16px',
+          backgroundColor: '#303134',
+          border: '1px solid transparent',
+          borderRadius: '24px',
+          boxShadow: '0 1px 6px rgba(32, 33, 36, 0.28)'
+        }}>
+          <Search size={18} color="#9aa0a6" />
           <input
-            type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 15, color: 'white' }}
+            onKeyDown={handleKeyDown}
+            placeholder="Find an AI tool..."
+            style={{
+              flex: 1,
+              border: 'none',
+              outline: 'none',
+              background: 'transparent',
+              fontSize: '16px',
+              color: '#e8eaed',
+            }}
           />
-          {isSearching
-            ? <Loader2 size={16} color="#71717a" className="animate-spin" style={{ flexShrink: 0 }} />
-            : query && (
-              <button type="button" onClick={() => { setQuery(''); setView('home'); setResults([]); setError(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
-                <X size={16} color="#71717a" />
-              </button>
-            )
-          }
-        </form>
+        </div>
       </header>
 
-      {/* Body */}
-      <div style={{ display: 'flex', padding: 20, gap: 40, maxWidth: 900, margin: '0 auto' }}>
-        {/* Results */}
-        <div style={{ flex: 1 }}>
-          {error && (
-            <div style={{ marginBottom: 16, padding: '12px 16px', background: '#450a0a22', border: '0.5px solid #7f1d1d', borderRadius: 8, color: '#fca5a5', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <AlertCircle size={16} style={{ flexShrink: 0 }} />
-              {error}
-            </div>
-          )}
+      {/* Results */}
+      <main style={{ padding: '24px', maxWidth: '800px', marginLeft: '60px' }}>
+        <div style={{ color: '#9aa0a6', fontSize: '14px', marginBottom: '24px' }}>
+          {isLoading
+            ? `Searching for "${initialQuery}"…`
+            : error
+              ? error
+              : `${results.length} result${results.length !== 1 ? 's' : ''} for "${initialQuery}"`
+          }
+        </div>
 
-          <div style={{ fontSize: 13, color: '#71717a', marginBottom: 20 }}>
-            About {filteredResults.length} result{filteredResults.length !== 1 ? 's' : ''}
-          </div>
+        {!isLoading && !error && results.length === 0 && (
+          <div style={{ color: '#9aa0a6', fontSize: '14px' }}>No tools found. Try a different search.</div>
+        )}
 
-          {filteredResults.length === 0 && !error ? (
-            <div style={{ fontSize: 14, color: '#71717a' }}>No tools found. Try a different search or clear filters.</div>
-          ) : (
-            filteredResults.map((tool, i) => {
-              const domain = getDomain(tool.source_url);
-              const price = formatPrice(tool.monthly_price);
-              const free = hasFree(tool);
-              return (
-                <div key={tool.id} style={{ marginBottom: 24, paddingBottom: 24, borderBottom: i < filteredResults.length - 1 ? '0.5px solid #27272a' : 'none' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#00AEEF22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 500, color: '#00AEEF', flexShrink: 0 }}>
-                      {tool.name[0]?.toUpperCase()}
-                    </div>
-                    {domain && <span style={{ fontSize: 13, color: '#a1a1aa' }}>{domain}</span>}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+          {results.map((tool) => {
+            const domain = getDomain(tool.source_url);
+            return (
+              <div key={tool.id} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{
+                    width: '24px',
+                    height: '24px',
+                    backgroundColor: '#303134',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <Sparkles size={12} color="#00AEEF" />
                   </div>
-                  {tool.source_url ? (
-                    <a
-                      href={tool.source_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ fontSize: 18, color: '#00AEEF', fontWeight: 400, marginBottom: 4, display: 'block', textDecoration: 'none' }}
-                      onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
-                      onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
-                    >
-                      {tool.name}
-                    </a>
-                  ) : (
-                    <div style={{ fontSize: 18, color: '#00AEEF', fontWeight: 400, marginBottom: 4 }}>{tool.name}</div>
-                  )}
-                  {tool.tagline && (
-                    <div style={{ fontSize: 14, color: '#a1a1aa', lineHeight: 1.6, marginBottom: 8 }}>{tool.tagline}</div>
-                  )}
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {tool.category && (
-                      <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 12, background: '#18181b', color: '#a1a1aa', border: '0.5px solid #27272a' }}>
-                        {tool.category}
-                      </span>
-                    )}
-                    {free && (
-                      <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 12, background: '#00AEEF11', color: '#00AEEF', border: '0.5px solid #00AEEF44' }}>
-                        Free tier
-                      </span>
-                    )}
-                    {price && price !== 'Free' && (
-                      <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 12, background: '#18181b', color: '#a1a1aa', border: '0.5px solid #27272a' }}>
-                        From {price}
-                      </span>
-                    )}
-                  </div>
+                  {domain && <span style={{ color: '#bdc1c6', fontSize: '14px' }}>{domain}</span>}
                 </div>
-              );
-            })
-          )}
-        </div>
 
-        {/* Sidebar */}
-        <div style={{ width: 180, flexShrink: 0, paddingTop: 4 }}>
-          <div style={{ fontSize: 11, fontWeight: 500, color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>Pricing</div>
-          {['All', 'Free only', 'Under $20/mo', 'Under $50/mo'].map((opt) => (
-            <div
-              key={opt}
-              onClick={() => setPriceFilter(opt)}
-              style={{ fontSize: 13, color: priceFilter === opt ? '#00AEEF' : '#a1a1aa', fontWeight: priceFilter === opt ? 500 : 400, padding: '5px 0', cursor: 'pointer' }}
-            >
-              {opt}
-            </div>
-          ))}
-          <div style={{ height: '0.5px', background: '#27272a', margin: '14px 0' }} />
-          <div style={{ fontSize: 11, fontWeight: 500, color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>Category</div>
-          {categories.map((cat) => (
-            <div
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              style={{ fontSize: 13, color: selectedCategory === cat ? '#00AEEF' : '#a1a1aa', fontWeight: selectedCategory === cat ? 500 : 400, padding: '5px 0', cursor: 'pointer' }}
-            >
-              {cat}
-            </div>
-          ))}
+                <a
+                  href={tool.source_url ?? '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: '#8ab4f8',
+                    fontSize: '20px',
+                    textDecoration: 'none',
+                    lineHeight: 1.3,
+                    display: 'inline-block',
+                    marginBottom: '4px'
+                  }}
+                >
+                  <h3 style={{ margin: 0, fontWeight: '400' }}>{tool.name}</h3>
+                </a>
+
+                {tool.tagline && (
+                  <p style={{
+                    color: '#bdc1c6',
+                    fontSize: '14px',
+                    lineHeight: 1.58,
+                    margin: 0,
+                    maxWidth: '600px'
+                  }}>
+                    {tool.tagline}
+                  </p>
+                )}
+
+                <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {tool.category && (
+                    <span style={{
+                      backgroundColor: '#303134',
+                      color: '#e8eaed',
+                      fontSize: '12px',
+                      padding: '4px 10px',
+                      borderRadius: '12px',
+                      border: '1px solid #5f6368'
+                    }}>
+                      {tool.category}
+                    </span>
+                  )}
+                  {tool.monthly_price === 0 || tool.free_tier === true || !!tool.free_tier_description ? (
+                    <span style={{
+                      backgroundColor: '#00AEEF11',
+                      color: '#00AEEF',
+                      fontSize: '12px',
+                      padding: '4px 10px',
+                      borderRadius: '12px',
+                      border: '1px solid #00AEEF44'
+                    }}>
+                      Free tier
+                    </span>
+                  ) : null}
+                  {tool.monthly_price !== null && tool.monthly_price > 0 && (
+                    <span style={{
+                      backgroundColor: '#303134',
+                      color: '#e8eaed',
+                      fontSize: '12px',
+                      padding: '4px 10px',
+                      borderRadius: '12px',
+                      border: '1px solid #5f6368'
+                    }}>
+                      From ${tool.monthly_price}/mo
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
-      </div>
+      </main>
     </div>
   );
 }
