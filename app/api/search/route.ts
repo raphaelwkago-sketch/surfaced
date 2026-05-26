@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   const q = request.nextUrl.searchParams.get('q') || '';
-  const url = `https://thebuilderman.app.n8n.cloud/webhook/Search?q=${encodeURIComponent(q)}`;
+  const url = `https://specked-recycler-uproot.ngrok-free.dev/webhook/Search?q=${encodeURIComponent(q)}`;
 
   console.log('[search] fetching:', url);
 
@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
   try {
     res = await fetch(url, {
       headers: {
+        'ngrok-skip-browser-warning': '1',
         'User-Agent': 'surfaced-app',
         'Accept': 'application/json'
       }
