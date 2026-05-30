@@ -7,7 +7,7 @@ const COLLECTION = 'tools';
 export async function GET(request: NextRequest) {
   const q = request.nextUrl.searchParams.get('q') || '';
 
-  const url = `${TYPESENSE_URL}/collections/${COLLECTION}/documents/search?q=${encodeURIComponent(q)}&query_by=name,tagline,category&per_page=25`;
+  const url = `${TYPESENSE_URL}/collections/${COLLECTION}/documents/search?q=${encodeURIComponent(q)}&query_by=name,tagline,category,gotcha,free_tier_description,limitations&per_page=25`;
 
   let res: Response;
   try {

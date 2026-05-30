@@ -13,6 +13,8 @@ interface Tool {
   free_tier?: boolean | string | null;
   free_tier_description?: string | null;
   monthly_price?: number | null;
+  gotcha?: string | null;
+  limitations?: string | null;
 }
 
 interface Route {
@@ -248,8 +250,13 @@ function SearchResults({ initialQuery, onNavigate }: { initialQuery: string; onN
                 {tool.name}
               </div>
               {tool.tagline && (
-                <div style={{ fontSize: '14px', color: '#bdc1c6', lineHeight: '1.6', marginBottom: '8px' }}>
+                <div style={{ fontSize: '14px', color: '#bdc1c6', lineHeight: '1.6', marginBottom: '6px' }}>
                   {tool.tagline}
+                </div>
+              )}
+              {tool.gotcha && (
+                <div style={{ fontSize: '13px', color: '#f28b82', lineHeight: '1.5', marginBottom: '8px' }}>
+                  ⚠ {tool.gotcha}
                 </div>
               )}
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
