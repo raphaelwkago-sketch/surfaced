@@ -255,7 +255,7 @@ function SearchResults({ initialQuery, onNavigate }: { initialQuery: string; onN
                 </div>
               )}
               {tool.gotcha && (
-                <div style={{ fontSize: '13px', color: '#f28b82', lineHeight: '1.5', marginBottom: '8px' }}>
+                <div style={{ fontSize: '13px', color: '#bdc1c6', lineHeight: '1.5', marginBottom: '8px' }}>
                   {tool.gotcha}
                 </div>
               )}
