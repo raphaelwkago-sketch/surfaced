@@ -7,7 +7,7 @@ const SEARCH_API = '/api/search';
 interface Tool {
   id?: string | number;
   name: string;
-  source_url?: string | null;
+  landing_url?: string | null;
   tagline?: string;
   category?: string;
   free_tier?: boolean | string | null;
@@ -241,10 +241,10 @@ function SearchResults({ initialQuery, onNavigate }: { initialQuery: string; onN
                 }}>
                   {tool.name?.[0] ?? '?'}
                 </div>
-                <span style={{ fontSize: '13px', color: '#9aa0a6' }}>{tool.source_url ?? ''}</span>
+                <span style={{ fontSize: '13px', color: '#9aa0a6' }}>{tool.landing_url ?? ''}</span>
               </div>
               <div
-                onClick={() => tool.source_url && window.open(tool.source_url, '_blank')}
+                onClick={() => tool.landing_url && window.open(tool.landing_url, '_blank')}
                 style={{ fontSize: '18px', color: '#00AEEF', fontWeight: '400', marginBottom: '4px', cursor: 'pointer' }}
               >
                 {tool.name}
@@ -255,8 +255,18 @@ function SearchResults({ initialQuery, onNavigate }: { initialQuery: string; onN
                 </div>
               )}
               {tool.gotcha && (
-                <div style={{ fontSize: '13px', color: '#bdc1c6', lineHeight: '1.5', marginBottom: '8px' }}>
+                <div style={{ fontSize: '13px', color: '#bdc1c6', lineHeight: '1.5', marginBottom: '4px' }}>
                   {tool.gotcha}
+                </div>
+              )}
+              {tool.limitations && (
+                <div style={{ fontSize: '13px', color: '#9aa0a6', lineHeight: '1.5', marginBottom: '4px' }}>
+                  {tool.limitations}
+                </div>
+              )}
+              {tool.free_tier_description && (
+                <div style={{ fontSize: '13px', color: '#9aa0a6', lineHeight: '1.5', marginBottom: '8px' }}>
+                  {tool.free_tier_description}
                 </div>
               )}
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>

@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   let primary: ToolDoc[];
   try {
     primary = await tsSearch(
-      `q=${encodeURIComponent(q)}&query_by=name,tagline,category,gotcha,free_tier_description&per_page=25`
+      `q=${encodeURIComponent(q)}&query_by=name,tagline,category,gotcha,limitations,free_tier_description&per_page=25`
     );
   } catch (err) {
     return NextResponse.json({ error: 'Fetch failed', detail: String(err) }, { status: 502 });
