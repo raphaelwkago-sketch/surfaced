@@ -160,8 +160,9 @@ function Home({ onNavigate }: { onNavigate: (path: string, query?: string) => vo
           placeholder="Find an AI tool..."
           style={{
             flex: 1,
-            border: 'none',
-            padding: '10px 0',
+            border: '1px solid #4a4d51',
+            borderRadius: '6px',
+            padding: '10px 14px',
             outline: 'none',
             background: 'transparent',
             fontSize: '15px',
@@ -253,7 +254,7 @@ function SearchResults({ initialQuery, onNavigate }: { initialQuery: string; onN
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search AI tools..."
-            style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: '15px', color: '#e8eaed' }}
+            style={{ flex: 1, border: '1px solid #4a4d51', borderRadius: '6px', padding: '6px 10px', outline: 'none', background: 'transparent', fontSize: '15px', color: '#e8eaed' }}
           />
           {query && (
             <span onClick={() => { setQuery(''); onNavigate('/'); }} style={{ cursor: 'pointer', color: '#9aa0a6', fontSize: '18px' }}>×</span>
