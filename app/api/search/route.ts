@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const TYPESENSE_URL = 'https://surfacedtypesense.ushuruflow.com';
+const TYPESENSE_URL = process.env.TYPESENSE_HOST ?? 'https://search.ushuruflow.com';
 const TYPESENSE_API_KEY = process.env.TYPESENSE_API_KEY ?? '';
 const COLLECTION = 'tools';
 
