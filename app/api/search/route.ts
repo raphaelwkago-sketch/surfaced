@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { Redis } from '@upstash/redis';
 
 const TYPESENSE_URL = process.env.TYPESENSE_HOST ?? 'https://search.ushuruflow.com';
 const TYPESENSE_API_KEY = process.env.TYPESENSE_API_KEY ?? '';
@@ -7,6 +8,15 @@ const COLLECTION = 'tools';
 const ANON_LIMIT = 3;
 const FREE_LIMIT = 15;
 const ANON_COOKIE = 'anon_searches';
+
+// 20 requests per 60s per IP — kills bots, invisible to real users
+const IP_RATE_LIMIT = 20;
+const IP_RATE_WINDOW = 60;
+
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+});
 
 type ToolDoc = { name?: string; category?: string; [key: string]: unknown };
 
@@ -27,6 +37,15 @@ function todayUTC(): string {
 export async function GET(request: NextRequest) {
   if (!TYPESENSE_API_KEY || !TYPESENSE_URL) {
     return NextResponse.json({ error: 'Search not configured' }, { status: 500 });
+  }
+
+  // IP rate limiting — blocks bots before any DB or Typesense calls
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+  const rateLimitKey = `rl:${ip}`;
+  const count = await redis.incr(rateLimitKey);
+  if (count === 1) await redis.expire(rateLimitKey, IP_RATE_WINDOW);
+  if (count > IP_RATE_LIMIT) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
   }
 
   const q = request.nextUrl.searchParams.get('q') || '';
