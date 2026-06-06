@@ -220,32 +220,35 @@ function TopActions({
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
       {/* Search count pill */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
+      {profile?.is_plus ? (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '6px',
+          padding: '4px 12px',
+          backgroundColor: '#00AEEF18',
+          border: '1px solid #00AEEF55',
+          borderRadius: '20px',
+        }}>
+          <span style={{ color: '#00AEEF', fontSize: '13px', fontWeight: '600', letterSpacing: '0.3px' }}>Plus</span>
+          <span style={{ color: '#00AEEF', fontSize: '15px', fontWeight: '400' }}>∞</span>
+        </div>
+      ) : (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '10px',
           padding: '4px 12px',
           backgroundColor: '#202124',
           border: '1px solid #4a4d51',
           borderRadius: '20px',
-        }}
-      >
-        {profile?.is_plus ? (
-          <span style={{ color: '#00AEEF', fontSize: '14px', fontWeight: '500' }}>∞</span>
-        ) : (
-          <>
-            <div style={{ width: '28px', height: '6px', backgroundColor: '#3c4043', borderRadius: '3px', overflow: 'hidden' }}>
-              <div style={{ width: `${barPct}%`, height: '100%', backgroundColor: '#00AEEF', borderRadius: '3px', transition: 'width 0.3s ease' }} />
-            </div>
-            <span style={{ color: '#e8eaed', fontSize: '14px', fontWeight: '500', letterSpacing: '0.5px' }}>
-              <span style={{ color: '#8ab4f8' }}>{searchesLeft}</span>
-              <span style={{ color: '#5f6368' }}> / </span>
-              <span style={{ color: '#8ab4f8' }}>10</span>
-            </span>
-          </>
-        )}
-      </div>
+        }}>
+          <div style={{ width: '28px', height: '6px', backgroundColor: '#3c4043', borderRadius: '3px', overflow: 'hidden' }}>
+            <div style={{ width: `${barPct}%`, height: '100%', backgroundColor: '#00AEEF', borderRadius: '3px', transition: 'width 0.3s ease' }} />
+          </div>
+          <span style={{ color: '#e8eaed', fontSize: '14px', fontWeight: '500', letterSpacing: '0.5px' }}>
+            <span style={{ color: '#8ab4f8' }}>{searchesLeft}</span>
+            <span style={{ color: '#5f6368' }}> / </span>
+            <span style={{ color: '#8ab4f8' }}>10</span>
+          </span>
+        </div>
+      )}
 
       {/* Subscribe (only for free users) */}
       {!profile?.is_plus && (
