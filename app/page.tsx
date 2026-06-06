@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
 const SEARCH_API = '/api/search';
-const PAYSTACK_PUBLIC_KEY = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY ?? '';
+const PAYSTACK_PUBLIC_KEY = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY ?? 'pk_test_1a53333b34e2b06a173732b0e0add1c48eaa6929';
 
 declare global {
   interface Window {
