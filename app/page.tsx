@@ -85,8 +85,8 @@ function LimitModal({
     const handler = PaystackPop.setup({
       key: PAYSTACK_PUBLIC_KEY,
       email: user.email,
-      amount: 900,
-      currency: 'USD',
+      amount: 120000,
+      currency: 'KES',
       // NB: must NOT be async — Paystack rejects async functions
       // (Object.prototype.toString returns "[object AsyncFunction]")
       callback: ({ reference }) => {
@@ -669,8 +669,8 @@ function Pricing({ onNavigate, user, profile, onSignOut }: { onNavigate: (path: 
     PaystackPop.setup({
       key: PAYSTACK_PUBLIC_KEY,
       email: user.email,
-      amount: 900,
-      currency: 'USD',
+      amount: 120000,
+      currency: 'KES',
       // NB: must NOT be async — Paystack rejects async functions
       // (Object.prototype.toString returns "[object AsyncFunction]")
       callback: ({ reference }) => {
