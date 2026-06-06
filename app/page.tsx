@@ -11,7 +11,7 @@ declare global {
   interface Window {
     PaystackPop: {
       setup: (opts: {
-        key: string; email: string; amount: number; currency: string;
+        key: string; email: string; amount: number;
         callback: (r: { reference: string }) => void;
         onClose: () => void;
       }) => { openIframe: () => void };
@@ -85,8 +85,7 @@ function LimitModal({
     const handler = PaystackPop.setup({
       key: PAYSTACK_PUBLIC_KEY,
       email: user.email,
-      amount: 900,   // $9 in cents
-      currency: 'USD',
+      amount: 900,
       // NB: must NOT be async — Paystack rejects async functions
       // (Object.prototype.toString returns "[object AsyncFunction]")
       callback: ({ reference }) => {
@@ -670,7 +669,6 @@ function Pricing({ onNavigate, user, profile, onSignOut }: { onNavigate: (path: 
       key: PAYSTACK_PUBLIC_KEY,
       email: user.email,
       amount: 900,
-      currency: 'USD',
       // NB: must NOT be async — Paystack rejects async functions
       // (Object.prototype.toString returns "[object AsyncFunction]")
       callback: ({ reference }) => {
