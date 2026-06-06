@@ -642,6 +642,38 @@ function SearchResults({ initialQuery, onNavigate, onLimitError, user, profile, 
 }
 
 function Pricing({ onNavigate, user, profile, onSignOut }: { onNavigate: (path: string, query?: string) => void } & AuthProps) {
+  const handleUpgrade = async () => {
+    if (!user?.email) {
+      const supabase = createClient();
+      supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/auth/callback` } });
+      return;
+    }
+    const loadPaystack = (): Promise<typeof window.PaystackPop> =>
+      new Promise(resolve => {
+        if (window.PaystackPop) { resolve(window.PaystackPop); return; }
+        const s = document.createElement('script');
+        s.src = 'https://js.paystack.co/v1/inline.js';
+        s.onload = () => resolve(window.PaystackPop);
+        document.head.appendChild(s);
+      });
+    const PaystackPop = await loadPaystack();
+    PaystackPop.setup({
+      key: PAYSTACK_PUBLIC_KEY,
+      email: user.email,
+      amount: 900,
+      currency: 'USD',
+      callback: async ({ reference }) => {
+        const res = await fetch('/api/paystack/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reference }),
+        });
+        if (res.ok) onNavigate('/');
+      },
+      onClose: () => {},
+    }).openIframe();
+  };
+
   return (
     <div style={{
       backgroundColor: '#202124',
@@ -771,8 +803,9 @@ function Pricing({ onNavigate, user, profile, onSignOut }: { onNavigate: (path: 
               }}
               onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#009fd9')}
               onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#00AEEF')}
+              onClick={handleUpgrade}
             >
-              Upgrade to Plus
+              {user ? 'Upgrade to Plus' : 'Sign in to Upgrade'}
             </button>
           </div>
 
