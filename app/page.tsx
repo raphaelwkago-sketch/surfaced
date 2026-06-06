@@ -646,21 +646,24 @@ function SearchResults({ initialQuery, onNavigate, onLimitError, onSearchDone, u
 }
 
 function Pricing({ onNavigate, user, profile, onSignOut }: { onNavigate: (path: string, query?: string) => void } & AuthProps) {
-  useEffect(() => {
-    if (window.PaystackPop) return;
-    const s = document.createElement('script');
-    s.src = 'https://js.paystack.co/v1/inline.js';
-    document.head.appendChild(s);
-  }, []);
+  const loadPaystack = (): Promise<typeof window.PaystackPop> =>
+    new Promise(resolve => {
+      if (window.PaystackPop) { resolve(window.PaystackPop); return; }
+      const s = document.createElement('script');
+      s.src = 'https://js.paystack.co/v1/inline.js';
+      s.onload = () => resolve(window.PaystackPop);
+      document.head.appendChild(s);
+    });
 
-  const handleUpgrade = () => {
+  const handleUpgrade = async () => {
     if (!user?.email) {
       const supabase = createClient();
       supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/auth/callback` } });
       return;
     }
-    if (!window.PaystackPop) return;
-    window.PaystackPop.setup({
+    const PaystackPop = await loadPaystack();
+    if (!PaystackPop) return;
+    PaystackPop.setup({
       key: PAYSTACK_PUBLIC_KEY,
       email: user.email,
       amount: 900,
@@ -685,6 +688,7 @@ function Pricing({ onNavigate, user, profile, onSignOut }: { onNavigate: (path: 
       fontFamily: 'system-ui, -apple-system, sans-serif',
       padding: '48px 24px',
     }}>
+
       <button
         onClick={() => onNavigate('/')}
         style={{
