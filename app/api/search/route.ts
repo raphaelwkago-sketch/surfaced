@@ -5,7 +5,7 @@ const TYPESENSE_URL = process.env.TYPESENSE_HOST ?? 'https://search.ushuruflow.c
 const TYPESENSE_API_KEY = process.env.TYPESENSE_API_KEY ?? '';
 const COLLECTION = 'tools';
 const ANON_LIMIT = 3;
-const FREE_LIMIT = 10;
+const FREE_LIMIT = 15;
 const ANON_COOKIE = 'anon_searches';
 
 type ToolDoc = { name?: string; category?: string; [key: string]: unknown };

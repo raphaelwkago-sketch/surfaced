@@ -212,10 +212,11 @@ function TopActions({
     );
   }
 
+  const FREE_LIMIT = 15;
   const searchesLeft = profile?.is_plus
     ? null
-    : Math.max(0, 10 - (profile?.searches_today ?? 0));
-  const barPct = profile?.is_plus ? 100 : ((profile?.searches_today ?? 0) / 10) * 100;
+    : Math.max(0, FREE_LIMIT - (profile?.searches_today ?? 0));
+  const barPct = profile?.is_plus ? 100 : ((profile?.searches_today ?? 0) / FREE_LIMIT) * 100;
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -235,7 +236,7 @@ function TopActions({
             <span style={{ color: '#e8eaed', fontSize: '14px', fontWeight: '500', letterSpacing: '0.5px' }}>
               <span style={{ color: '#8ab4f8' }}>{searchesLeft}</span>
               <span style={{ color: '#5f6368' }}> / </span>
-              <span style={{ color: '#8ab4f8' }}>10</span>
+              <span style={{ color: '#8ab4f8' }}>15</span>
             </span>
           </div>
           <button
@@ -347,8 +348,10 @@ export default function App() {
     />
   );
 
+  const handleSearchDone = () => { if (user) fetchProfile(user.id); };
+
   if (currentRoute.path === '/search') {
-    return <>{limitModal}<SearchResults initialQuery={currentRoute.query} onNavigate={navigate} onLimitError={setLimitError} {...authProps} /></>;
+    return <>{limitModal}<SearchResults initialQuery={currentRoute.query} onNavigate={navigate} onLimitError={setLimitError} onSearchDone={handleSearchDone} {...authProps} /></>;
   }
 
   if (currentRoute.path === '/pricing') {
@@ -452,7 +455,7 @@ function Home({ onNavigate, user, profile, onSignOut }: { onNavigate: (path: str
   );
 }
 
-function SearchResults({ initialQuery, onNavigate, onLimitError, user, profile, onSignOut }: { initialQuery: string; onNavigate: (path: string, query?: string) => void; onLimitError: (e: LimitError) => void } & AuthProps) {
+function SearchResults({ initialQuery, onNavigate, onLimitError, onSearchDone, user, profile, onSignOut }: { initialQuery: string; onNavigate: (path: string, query?: string) => void; onLimitError: (e: LimitError) => void; onSearchDone: () => void } & AuthProps) {
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<Tool[]>([]);
   const [loading, setLoading] = useState(false);
@@ -475,6 +478,7 @@ function SearchResults({ initialQuery, onNavigate, onLimitError, user, profile, 
         const data = await res.json();
         setResults(Array.isArray(data) ? data : []);
         setLoading(false);
+        onSearchDone();
       })
       .catch(() => setLoading(false));
   }, [initialQuery]);
@@ -642,22 +646,21 @@ function SearchResults({ initialQuery, onNavigate, onLimitError, user, profile, 
 }
 
 function Pricing({ onNavigate, user, profile, onSignOut }: { onNavigate: (path: string, query?: string) => void } & AuthProps) {
-  const handleUpgrade = async () => {
+  useEffect(() => {
+    if (window.PaystackPop) return;
+    const s = document.createElement('script');
+    s.src = 'https://js.paystack.co/v1/inline.js';
+    document.head.appendChild(s);
+  }, []);
+
+  const handleUpgrade = () => {
     if (!user?.email) {
       const supabase = createClient();
       supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/auth/callback` } });
       return;
     }
-    const loadPaystack = (): Promise<typeof window.PaystackPop> =>
-      new Promise(resolve => {
-        if (window.PaystackPop) { resolve(window.PaystackPop); return; }
-        const s = document.createElement('script');
-        s.src = 'https://js.paystack.co/v1/inline.js';
-        s.onload = () => resolve(window.PaystackPop);
-        document.head.appendChild(s);
-      });
-    const PaystackPop = await loadPaystack();
-    PaystackPop.setup({
+    if (!window.PaystackPop) return;
+    window.PaystackPop.setup({
       key: PAYSTACK_PUBLIC_KEY,
       email: user.email,
       amount: 900,
@@ -731,7 +734,7 @@ function Pricing({ onNavigate, user, profile, onSignOut }: { onNavigate: (path: 
             </div>
             <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 40px', flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <li style={{ color: '#bdc1c6', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ color: '#00AEEF' }}>✓</span> 10 searches a day
+                <span style={{ color: '#00AEEF' }}>✓</span> 15 free daily searches
               </li>
             </ul>
             <button style={{
