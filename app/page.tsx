@@ -5,6 +5,21 @@ import { createClient } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
 const SEARCH_API = '/api/search';
+const PAYSTACK_PUBLIC_KEY = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY ?? '';
+
+declare global {
+  interface Window {
+    PaystackPop: {
+      setup: (opts: {
+        key: string; email: string; amount: number; currency: string;
+        callback: (r: { reference: string }) => void;
+        onClose: () => void;
+      }) => { openIframe: () => void };
+    };
+  }
+}
+
+type LimitError = 'anon_limit' | 'free_limit' | null;
 
 interface Profile {
   is_plus: boolean;
@@ -30,6 +45,117 @@ interface Tool {
 interface Route {
   path: string;
   query: string;
+}
+
+function LimitModal({
+  error,
+  user,
+  onClose,
+  onUpgradeSuccess,
+}: {
+  error: LimitError;
+  user: User | null;
+  onClose: () => void;
+  onUpgradeSuccess: () => void;
+}) {
+  if (!error) return null;
+
+  const supabase = createClient();
+
+  const handleSignIn = () => {
+    supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+  };
+
+  const handleUpgrade = async () => {
+    if (!user?.email) { handleSignIn(); return; }
+
+    const loadPaystack = (): Promise<typeof window.PaystackPop> =>
+      new Promise(resolve => {
+        if (window.PaystackPop) { resolve(window.PaystackPop); return; }
+        const s = document.createElement('script');
+        s.src = 'https://js.paystack.co/v1/inline.js';
+        s.onload = () => resolve(window.PaystackPop);
+        document.head.appendChild(s);
+      });
+
+    const PaystackPop = await loadPaystack();
+    const handler = PaystackPop.setup({
+      key: PAYSTACK_PUBLIC_KEY,
+      email: user.email,
+      amount: 900,   // $9 in cents
+      currency: 'USD',
+      callback: async ({ reference }) => {
+        const res = await fetch('/api/paystack/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reference }),
+        });
+        if (res.ok) {
+          onUpgradeSuccess();
+          onClose();
+        }
+      },
+      onClose: () => {},
+    });
+    handler.openIframe();
+  };
+
+  const isAnon = error === 'anon_limit';
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 1000,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          backgroundColor: '#303134', borderRadius: '20px', padding: '40px',
+          maxWidth: '400px', width: '90%', border: '1px solid #4a4d51',
+          display: 'flex', flexDirection: 'column', gap: '16px',
+        }}
+      >
+        <div style={{ fontSize: '32px', textAlign: 'center' }}>{isAnon ? '🔍' : '⚡'}</div>
+        <h2 style={{ color: '#e8eaed', fontSize: '20px', fontWeight: '600', textAlign: 'center', margin: 0 }}>
+          {isAnon ? 'Free searches used up' : "You've hit your daily limit"}
+        </h2>
+        <p style={{ color: '#9aa0a6', fontSize: '14px', textAlign: 'center', margin: 0, lineHeight: '1.6' }}>
+          {isAnon
+            ? 'Sign in with Google to get 15 free searches per day.'
+            : 'Upgrade to Plus for unlimited searches — $9/mo.'}
+        </p>
+        <button
+          onClick={isAnon ? handleSignIn : handleUpgrade}
+          style={{
+            width: '100%', padding: '14px', borderRadius: '12px', border: 'none',
+            backgroundColor: '#00AEEF', color: '#fff', fontSize: '15px',
+            fontWeight: '500', cursor: 'pointer', marginTop: '8px',
+            transition: 'background-color 0.2s',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#009fd9')}
+          onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#00AEEF')}
+        >
+          {isAnon ? 'Sign in with Google' : 'Upgrade to Plus — $9/mo'}
+        </button>
+        <button
+          onClick={onClose}
+          style={{
+            background: 'none', border: 'none', color: '#9aa0a6',
+            fontSize: '13px', cursor: 'pointer', textAlign: 'center',
+          }}
+        >
+          Maybe later
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function TopActions({
@@ -187,6 +313,7 @@ export default function App() {
   const [currentRoute, setCurrentRoute] = useState<Route>({ path: '/', query: '' });
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [limitError, setLimitError] = useState<LimitError>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -226,15 +353,24 @@ export default function App() {
 
   const authProps = { user, profile, onSignOut: handleSignOut };
 
+  const limitModal = (
+    <LimitModal
+      error={limitError}
+      user={user}
+      onClose={() => setLimitError(null)}
+      onUpgradeSuccess={() => { if (user) fetchProfile(user.id); }}
+    />
+  );
+
   if (currentRoute.path === '/search') {
-    return <SearchResults initialQuery={currentRoute.query} onNavigate={navigate} {...authProps} />;
+    return <>{limitModal}<SearchResults initialQuery={currentRoute.query} onNavigate={navigate} onLimitError={setLimitError} {...authProps} /></>;
   }
 
   if (currentRoute.path === '/pricing') {
-    return <Pricing onNavigate={navigate} {...authProps} />;
+    return <>{limitModal}<Pricing onNavigate={navigate} {...authProps} /></>;
   }
 
-  return <Home onNavigate={navigate} {...authProps} />;
+  return <>{limitModal}<Home onNavigate={navigate} {...authProps} /></>;
 }
 
 interface AuthProps {
@@ -331,7 +467,7 @@ function Home({ onNavigate, user, profile, onSignOut }: { onNavigate: (path: str
   );
 }
 
-function SearchResults({ initialQuery, onNavigate, user, profile, onSignOut }: { initialQuery: string; onNavigate: (path: string, query?: string) => void } & AuthProps) {
+function SearchResults({ initialQuery, onNavigate, onLimitError, user, profile, onSignOut }: { initialQuery: string; onNavigate: (path: string, query?: string) => void; onLimitError: (e: LimitError) => void } & AuthProps) {
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<Tool[]>([]);
   const [loading, setLoading] = useState(false);
@@ -344,8 +480,17 @@ function SearchResults({ initialQuery, onNavigate, user, profile, onSignOut }: {
     if (!initialQuery) { setResults([]); return; }
     setLoading(true);
     fetch(`${SEARCH_API}?q=${encodeURIComponent(initialQuery)}`)
-      .then(res => res.json())
-      .then(data => { setResults(Array.isArray(data) ? data : []); setLoading(false); })
+      .then(async res => {
+        if (res.status === 401) {
+          const data = await res.json();
+          onLimitError(data.error as LimitError);
+          setLoading(false);
+          return;
+        }
+        const data = await res.json();
+        setResults(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   }, [initialQuery]);
 
