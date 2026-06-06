@@ -87,16 +87,19 @@ function LimitModal({
       email: user.email,
       amount: 900,   // $9 in cents
       currency: 'USD',
-      callback: async ({ reference }) => {
-        const res = await fetch('/api/paystack/verify', {
+      // NB: must NOT be async — Paystack rejects async functions
+      // (Object.prototype.toString returns "[object AsyncFunction]")
+      callback: ({ reference }) => {
+        fetch('/api/paystack/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ reference }),
+        }).then(res => {
+          if (res.ok) {
+            onUpgradeSuccess();
+            onClose();
+          }
         });
-        if (res.ok) {
-          onUpgradeSuccess();
-          onClose();
-        }
       },
       onClose: () => {},
     });
@@ -668,13 +671,14 @@ function Pricing({ onNavigate, user, profile, onSignOut }: { onNavigate: (path: 
       email: user.email,
       amount: 900,
       currency: 'USD',
-      callback: async ({ reference }) => {
-        const res = await fetch('/api/paystack/verify', {
+      // NB: must NOT be async — Paystack rejects async functions
+      // (Object.prototype.toString returns "[object AsyncFunction]")
+      callback: ({ reference }) => {
+        fetch('/api/paystack/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ reference }),
-        });
-        if (res.ok) onNavigate('/');
+        }).then(res => { if (res.ok) onNavigate('/'); });
       },
       onClose: () => {},
     }).openIframe();
