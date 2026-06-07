@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { Redis } from '@upstash/redis';
+import { createAdminClient } from '@/lib/supabase-admin';
 
 const TYPESENSE_URL = process.env.TYPESENSE_HOST ?? 'https://search.ushuruflow.com';
 const TYPESENSE_API_KEY = process.env.TYPESENSE_API_KEY ?? '';
@@ -148,8 +149,11 @@ export async function GET(request: NextRequest) {
       path: '/',
     });
   } else if (!isPlus) {
+    // Write the count with the service-role client so RLS can forbid all
+    // browser writes to profiles. Users must never be able to reset this.
     const newCount = searchesToday + 1;
-    await supabase
+    const admin = createAdminClient();
+    await admin
       .from('profiles')
       .update({ searches_today: newCount, last_search_date: todayUTC() })
       .eq('id', userId);

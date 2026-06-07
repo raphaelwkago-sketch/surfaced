@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
+import { createAdminClient } from '@/lib/supabase-admin';
 
 export async function POST(request: NextRequest) {
   const { reference } = await request.json();
@@ -31,8 +32,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   }
 
-  // Mark user as Plus
-  const { error } = await supabase
+  // Mark user as Plus — service-role write (browser writes are forbidden by RLS)
+  const admin = createAdminClient();
+  const { error } = await admin
     .from('profiles')
     .update({ is_plus: true, paystack_reference: reference })
     .eq('id', user.id);

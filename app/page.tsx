@@ -5,19 +5,6 @@ import { createClient } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
 const SEARCH_API = '/api/search';
-const PAYSTACK_PUBLIC_KEY = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY ?? 'pk_test_1a53333b34e2b06a173732b0e0add1c48eaa6929';
-
-declare global {
-  interface Window {
-    PaystackPop: {
-      setup: (opts: {
-        key: string; email: string; amount: number; currency: string; channels?: string[];
-        callback: (r: { reference: string }) => void;
-        onClose: () => void;
-      }) => { openIframe: () => void };
-    };
-  }
-}
 
 type LimitError = 'anon_limit' | 'free_limit' | null;
 
@@ -49,14 +36,10 @@ interface Route {
 
 function LimitModal({
   error,
-  user,
   onClose,
-  onUpgradeSuccess,
 }: {
   error: LimitError;
-  user: User | null;
   onClose: () => void;
-  onUpgradeSuccess: () => void;
 }) {
   if (!error) return null;
 
@@ -67,44 +50,6 @@ function LimitModal({
       provider: 'google',
       options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
-  };
-
-  const handleUpgrade = async () => {
-    if (!user?.email) { handleSignIn(); return; }
-
-    const loadPaystack = (): Promise<typeof window.PaystackPop> =>
-      new Promise(resolve => {
-        if (window.PaystackPop) { resolve(window.PaystackPop); return; }
-        const s = document.createElement('script');
-        s.src = 'https://js.paystack.co/v1/inline.js';
-        s.onload = () => resolve(window.PaystackPop);
-        document.head.appendChild(s);
-      });
-
-    const PaystackPop = await loadPaystack();
-    const handler = PaystackPop.setup({
-      key: PAYSTACK_PUBLIC_KEY,
-      email: user.email,
-      amount: 120000,
-      currency: 'KES',
-      channels: ['card'],
-      // NB: must NOT be async — Paystack rejects async functions
-      // (Object.prototype.toString returns "[object AsyncFunction]")
-      callback: ({ reference }) => {
-        fetch('/api/paystack/verify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ reference }),
-        }).then(res => {
-          if (res.ok) {
-            onUpgradeSuccess();
-            onClose();
-          }
-        });
-      },
-      onClose: () => {},
-    });
-    handler.openIframe();
   };
 
   const isAnon = error === 'anon_limit';
@@ -126,36 +71,39 @@ function LimitModal({
           display: 'flex', flexDirection: 'column', gap: '16px',
         }}
       >
-        <div style={{ fontSize: '32px', textAlign: 'center' }}>{isAnon ? '🔍' : '⚡'}</div>
+        <div style={{ fontSize: '32px', textAlign: 'center' }}>{isAnon ? '🔍' : '🌙'}</div>
         <h2 style={{ color: '#e8eaed', fontSize: '20px', fontWeight: '600', textAlign: 'center', margin: 0 }}>
-          {isAnon ? 'Free searches used up' : "You've hit your daily limit"}
+          {isAnon ? 'Free searches used up' : "That's all for today"}
         </h2>
         <p style={{ color: '#9aa0a6', fontSize: '14px', textAlign: 'center', margin: 0, lineHeight: '1.6' }}>
           {isAnon
             ? 'Sign in with Google to get 15 free searches per day.'
-            : 'Upgrade to Plus for unlimited searches — $9/mo.'}
+            : "You've used all 15 of today's searches. Come back tomorrow for 15 more."}
         </p>
-        <button
-          onClick={isAnon ? handleSignIn : handleUpgrade}
-          style={{
-            width: '100%', padding: '14px', borderRadius: '12px', border: 'none',
-            backgroundColor: '#00AEEF', color: '#fff', fontSize: '15px',
-            fontWeight: '500', cursor: 'pointer', marginTop: '8px',
-            transition: 'background-color 0.2s',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#009fd9')}
-          onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#00AEEF')}
-        >
-          {isAnon ? 'Sign in with Google' : 'Upgrade to Plus — $9/mo'}
-        </button>
+        {isAnon && (
+          <button
+            onClick={handleSignIn}
+            style={{
+              width: '100%', padding: '14px', borderRadius: '12px', border: 'none',
+              backgroundColor: '#00AEEF', color: '#fff', fontSize: '15px',
+              fontWeight: '500', cursor: 'pointer', marginTop: '8px',
+              transition: 'background-color 0.2s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#009fd9')}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#00AEEF')}
+          >
+            Sign in with Google
+          </button>
+        )}
         <button
           onClick={onClose}
           style={{
             background: 'none', border: 'none', color: '#9aa0a6',
             fontSize: '13px', cursor: 'pointer', textAlign: 'center',
+            marginTop: isAnon ? 0 : '8px',
           }}
         >
-          Maybe later
+          {isAnon ? 'Maybe later' : 'Got it'}
         </button>
       </div>
     </div>
@@ -243,18 +191,6 @@ function TopActions({
               <span style={{ color: '#8ab4f8' }}>15</span>
             </span>
           </div>
-          <button
-            onClick={() => onNavigate('/pricing')}
-            style={{
-              background: 'transparent', border: 'none', color: '#00AEEF',
-              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace',
-              fontSize: '15px', cursor: 'pointer', padding: '0', transition: 'opacity 0.2s',
-            }}
-            onMouseEnter={e => ((e.target as HTMLElement).style.opacity = '0.7')}
-            onMouseLeave={e => ((e.target as HTMLElement).style.opacity = '1')}
-          >
-            Subscribe
-          </button>
         </>
       )}
 
@@ -346,9 +282,7 @@ export default function App() {
   const limitModal = (
     <LimitModal
       error={limitError}
-      user={user}
       onClose={() => setLimitError(null)}
-      onUpgradeSuccess={() => { if (user) fetchProfile(user.id); }}
     />
   );
 
@@ -358,9 +292,7 @@ export default function App() {
     return <>{limitModal}<SearchResults initialQuery={currentRoute.query} onNavigate={navigate} onLimitError={setLimitError} onSearchDone={handleSearchDone} {...authProps} /></>;
   }
 
-  if (currentRoute.path === '/pricing') {
-    return <>{limitModal}<Pricing onNavigate={navigate} {...authProps} /></>;
-  }
+  // Pricing/payments disabled for launch — route falls through to Home.
 
   return <>{limitModal}<Home onNavigate={navigate} {...authProps} /></>;
 }
@@ -646,188 +578,5 @@ function SearchResults({ initialQuery, onNavigate, onLimitError, onSearchDone, u
         </div>
       </div>
     </main>
-  );
-}
-
-function Pricing({ onNavigate, user, profile, onSignOut }: { onNavigate: (path: string, query?: string) => void } & AuthProps) {
-  const loadPaystack = (): Promise<typeof window.PaystackPop> =>
-    new Promise(resolve => {
-      if (window.PaystackPop) { resolve(window.PaystackPop); return; }
-      const s = document.createElement('script');
-      s.src = 'https://js.paystack.co/v1/inline.js';
-      s.onload = () => resolve(window.PaystackPop);
-      document.head.appendChild(s);
-    });
-
-  const handleUpgrade = async () => {
-    if (!user?.email) {
-      const supabase = createClient();
-      supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/auth/callback` } });
-      return;
-    }
-    const PaystackPop = await loadPaystack();
-    if (!PaystackPop) return;
-    PaystackPop.setup({
-      key: PAYSTACK_PUBLIC_KEY,
-      email: user.email,
-      amount: 120000,
-      currency: 'KES',
-      channels: ['card'],
-      // NB: must NOT be async — Paystack rejects async functions
-      // (Object.prototype.toString returns "[object AsyncFunction]")
-      callback: ({ reference }) => {
-        fetch('/api/paystack/verify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ reference }),
-        }).then(res => { if (res.ok) onNavigate('/'); });
-      },
-      onClose: () => {},
-    }).openIframe();
-  };
-
-  return (
-    <div style={{
-      backgroundColor: '#202124',
-      minHeight: '100vh',
-      color: '#e8eaed',
-      fontFamily: 'system-ui, -apple-system, sans-serif',
-      padding: '48px 24px',
-    }}>
-
-      <button
-        onClick={() => onNavigate('/')}
-        style={{
-          position: 'fixed',
-          top: '48px',
-          left: '48px',
-          background: 'transparent',
-          border: 'none',
-          color: '#9aa0a6',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          fontSize: '14px',
-          transition: 'color 0.2s',
-        }}
-        onMouseEnter={e => (e.currentTarget.style.color = '#e8eaed')}
-        onMouseLeave={e => (e.currentTarget.style.color = '#9aa0a6')}
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="m15 18-6-6 6-6" />
-        </svg>
-        Back
-      </button>
-
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '90vh' }}>
-        <h1 style={{ fontSize: '42px', fontWeight: '600', letterSpacing: '-1px', marginBottom: '64px', textAlign: 'center' }}>
-          So we can serve you more.
-        </h1>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '32px', width: '100%', maxWidth: '720px' }}>
-
-          {/* Free */}
-          <div style={{
-            backgroundColor: '#303134',
-            borderRadius: '24px',
-            padding: '40px',
-            border: '1px solid #5f6368',
-            display: 'flex',
-            flexDirection: 'column',
-            height: '500px',
-          }}>
-            <h2 style={{ fontSize: '22px', fontWeight: '600', marginBottom: '8px' }}>Free</h2>
-            <p style={{ color: '#bdc1c6', marginBottom: '24px', fontSize: '14px' }}>The essentials for everyday search.</p>
-            <div style={{ fontSize: '36px', fontWeight: '700', marginBottom: '32px' }}>
-              $0<span style={{ fontSize: '16px', color: '#9aa0a6', fontWeight: '400' }}>/mo</span>
-            </div>
-            <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 40px', flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <li style={{ color: '#bdc1c6', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ color: '#00AEEF' }}>✓</span> 15 free daily searches
-              </li>
-            </ul>
-            <button style={{
-              width: '100%',
-              padding: '14px',
-              borderRadius: '12px',
-              border: '1px solid #5f6368',
-              background: 'transparent',
-              color: '#9aa0a6',
-              fontSize: '15px',
-              fontWeight: '500',
-              cursor: 'default',
-            }}>
-              Current Plan
-            </button>
-          </div>
-
-          {/* Plus */}
-          <div style={{
-            backgroundColor: '#303134',
-            borderRadius: '24px',
-            padding: '40px',
-            border: '1px solid #00AEEF',
-            display: 'flex',
-            flexDirection: 'column',
-            height: '500px',
-            boxShadow: '0 0 24px rgba(0,174,239,0.1)',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
-              <div>
-                <h2 style={{ fontSize: '22px', fontWeight: '600', marginBottom: '2px' }}>Plus</h2>
-                <p style={{ color: '#9aa0a6', fontSize: '11px' }}>(+ sales tax)</p>
-              </div>
-              <span style={{
-                backgroundColor: '#00AEEF22',
-                color: '#00AEEF',
-                padding: '4px 12px',
-                borderRadius: '999px',
-                fontSize: '11px',
-                fontWeight: '600',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-                border: '1px solid #00AEEF44',
-              }}>
-                Popular
-              </span>
-            </div>
-            <p style={{ color: '#bdc1c6', marginBottom: '24px', fontSize: '14px' }}>Advanced power for deep research.</p>
-            <div style={{ fontSize: '36px', fontWeight: '700', marginBottom: '32px' }}>
-              $9<span style={{ fontSize: '16px', color: '#9aa0a6', fontWeight: '400' }}>/mo</span>
-            </div>
-            <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 40px', flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <li style={{ color: '#bdc1c6', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ color: '#00AEEF' }}>✨</span> Unlimited searches
-              </li>
-            </ul>
-            <button
-              style={{
-                width: '100%',
-                padding: '14px',
-                borderRadius: '12px',
-                border: 'none',
-                backgroundColor: '#00AEEF',
-                color: '#fff',
-                fontSize: '15px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                transition: 'background-color 0.2s',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#009fd9')}
-              onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#00AEEF')}
-              onClick={handleUpgrade}
-            >
-              {user ? 'Upgrade to Plus' : 'Sign in to Upgrade'}
-            </button>
-          </div>
-
-        </div>
-      </div>
-
-      <footer style={{ textAlign: 'center', color: '#9aa0a6', fontSize: '13px', marginTop: '64px' }}>
-        © 2026 Surfaced. All rights reserved.
-      </footer>
-    </div>
   );
 }
