@@ -3,7 +3,7 @@ import { createServerClient } from '@supabase/ssr';
 import { Redis } from '@upstash/redis';
 import { createAdminClient } from '@/lib/supabase-admin';
 
-const TYPESENSE_URL = process.env.TYPESENSE_HOST ?? 'https://search.ushuruflow.com';
+const TYPESENSE_URL = process.env.TYPESENSE_HOST ?? 'https://surfacedtypesense.ushuruflow.com';
 const TYPESENSE_API_KEY = process.env.TYPESENSE_API_KEY ?? '';
 const COLLECTION = 'tools';
 const ANON_LIMIT = 3;
