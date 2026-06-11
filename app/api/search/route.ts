@@ -117,8 +117,8 @@ export async function GET(request: NextRequest) {
     primary = await tsSearch(
       `q=${encodeURIComponent(q)}&query_by=name,tagline,category,gotcha,limitations,free_tier_description&per_page=25`
     );
-  } catch (err) {
-    return NextResponse.json({ error: 'Fetch failed', detail: String(err) }, { status: 502 });
+  } catch {
+    return NextResponse.json({ error: 'Search unavailable' }, { status: 502 });
   }
 
   // Pull remaining tools from the same category as the top result
@@ -137,9 +137,7 @@ export async function GET(request: NextRequest) {
   }
 
   // --- Post-search: increment counts ---
-  const finalResponse = NextResponse.json(results, {
-    headers: { 'Access-Control-Allow-Origin': '*' },
-  });
+  const finalResponse = NextResponse.json(results);
 
   if (!userId) {
     const anonCount = parseInt(request.cookies.get(ANON_COOKIE)?.value ?? '0', 10);
