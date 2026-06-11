@@ -6,6 +6,6 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: '*',
       allow: '/',
     },
-    sitemap: 'https://surfaced-seven.vercel.app/sitemap.xml',
+    sitemap: 'https://surfacedplus.com/sitemap.xml',
   };
 }

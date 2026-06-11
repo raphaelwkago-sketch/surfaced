@@ -14,12 +14,12 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Surfaced — Search AI tools without the noise",
-  description: "Find the right AI tool for the job. Search, compare, and discover AI tools without the noise.",
-  metadataBase: new URL('https://surfaced-seven.vercel.app'),
+  description: "Search for AI tools without the noise and without the surprises.",
+  metadataBase: new URL('https://surfacedplus.com'),
   openGraph: {
     title: "Surfaced — Search AI tools without the noise",
-    description: "Find the right AI tool for the job. Search, compare, and discover AI tools without the noise.",
-    url: 'https://surfaced-seven.vercel.app',
+    description: "Search for AI tools without the noise and without the surprises.",
+    url: 'https://surfacedplus.com',
     siteName: 'Surfaced',
     type: 'website',
   },
