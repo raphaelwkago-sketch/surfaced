@@ -501,7 +501,7 @@ function SearchResults({ initialQuery, onNavigate, onLimitError, onSearchDone, u
         onChange={e => setQuery(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="Search AI tools..."
-        style={{ flex: 1, minWidth: 0, border: 'none', padding: 0, outline: 'none', background: 'transparent', fontSize: '16px', color: '#e8eaed' }}
+        style={{ flex: 1, minWidth: 0, border: '1px solid #4a4d51', borderRadius: '6px', padding: '6px 10px', outline: 'none', background: 'transparent', fontSize: '15px', color: '#e8eaed' }}
       />
       {query && (
         <span
