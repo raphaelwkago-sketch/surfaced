@@ -19,13 +19,13 @@ interface Profile {
 interface Tool {
   id?: string | number;
   name: string;
-  landing_url?: string | null;
+  source_url?: string | null;
+  pricing_url?: string | null;
   tagline?: string;
   category?: string;
   free_tier?: boolean | string | null;
   free_tier_description?: string | null;
-  monthly_price?: number | null;
-  gotcha?: string | null;
+  monthly_price?: number | string | null;
   limitations?: string | null;
 }
 
@@ -473,11 +473,19 @@ function SearchResults({ initialQuery, onNavigate, onLimitError, onSearchDone, u
     return !!tool.free_tier_description;
   };
 
+  // monthly_price arrives as a string from Typesense — parse before comparing
+  const priceOf = (tool: Tool): number | null => {
+    if (tool.monthly_price == null || tool.monthly_price === '') return null;
+    const n = Number(tool.monthly_price);
+    return Number.isFinite(n) ? n : null;
+  };
+
   const filtered = results.filter(tool => {
     if (categoryFilter !== 'All' && tool.category !== categoryFilter) return false;
-    if (priceFilter === 'Free only') return hasFree(tool) || tool.monthly_price === 0;
-    if (priceFilter === 'Under $20/mo') return tool.monthly_price != null && tool.monthly_price <= 20;
-    if (priceFilter === 'Under $50/mo') return tool.monthly_price != null && tool.monthly_price <= 50;
+    const price = priceOf(tool);
+    if (priceFilter === 'Free only') return hasFree(tool) || price === 0;
+    if (priceFilter === 'Under $20/mo') return price != null && price <= 20;
+    if (priceFilter === 'Under $50/mo') return price != null && price <= 50;
     return true;
   });
 
@@ -614,19 +622,16 @@ function SearchResults({ initialQuery, onNavigate, onLimitError, onSearchDone, u
                 }}>
                   {tool.name?.[0] ?? '?'}
                 </div>
-                <span style={{ fontSize: '13px', color: '#9aa0a6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tool.landing_url ?? ''}</span>
+                <span style={{ fontSize: '13px', color: '#9aa0a6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tool.source_url ?? ''}</span>
               </div>
               <div
-                onClick={() => tool.landing_url && window.open(tool.landing_url, '_blank')}
+                onClick={() => tool.source_url && window.open(tool.source_url, '_blank')}
                 style={{ fontSize: '18px', color: '#00AEEF', fontWeight: '400', marginBottom: '4px', cursor: 'pointer', overflowWrap: 'break-word' }}
               >
                 {tool.name}
               </div>
               {tool.tagline && (
                 <div style={{ fontSize: '14px', color: '#bdc1c6', lineHeight: '1.6', marginBottom: '6px' }}>{tool.tagline}</div>
-              )}
-              {tool.gotcha && (
-                <div style={{ fontSize: '13px', color: '#bdc1c6', lineHeight: '1.5', marginBottom: '4px' }}>{tool.gotcha}</div>
               )}
               {tool.limitations && (
                 <div style={{ fontSize: '13px', color: '#9aa0a6', lineHeight: '1.5', marginBottom: '4px' }}>{tool.limitations}</div>
@@ -645,9 +650,9 @@ function SearchResults({ initialQuery, onNavigate, onLimitError, onSearchDone, u
                     Free tier
                   </span>
                 )}
-                {tool.monthly_price != null && tool.monthly_price > 0 && (
+                {(priceOf(tool) ?? 0) > 0 && (
                   <span style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '12px', backgroundColor: '#303134', color: '#9aa0a6', border: '1px solid #3c4043' }}>
-                    From ${tool.monthly_price}/mo
+                    From ${priceOf(tool)}/mo
                   </span>
                 )}
               </div>

@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
   let primary: ToolDoc[];
   try {
     primary = await tsSearch(
-      `q=${encodeURIComponent(q)}&query_by=name,tagline,category,gotcha,limitations,free_tier_description&per_page=25`
+      `q=${encodeURIComponent(q)}&query_by=name,tagline,category,limitations,free_tier_description&per_page=25`
     );
   } catch {
     return NextResponse.json({ error: 'Search unavailable' }, { status: 502 });
